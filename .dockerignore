@@ -1,0 +1,10 @@
+.git
+.github
+.idea
+.claude
+.superpowers
+data
+target
+*.log
+.DS_Store
+
