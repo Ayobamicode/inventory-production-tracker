@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inventory Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="container">
+    <h1>Inventory Dashboard</h1>
+
+    <div class="tab-bar">
+        <button class="tab active" data-tab="inventory">Inventory</button>
+        <button class="tab" data-tab="orders">Orders</button>
+        <button class="tab" data-tab="bom">BOM</button>
+        <button class="tab" data-tab="recipes">Recipes</button>
+    </div>
+
+    <!-- Inventory Tab -->
+    <div id="tab-inventory" class="tab-content active">
+        <form id="inventory-form" class="card">
+            <h2>Add Inventory Item</h2>
+
+            <label for="id">ID</label>
+            <input type="number" id="id" required />
+
+            <label for="itemName">Item Name</label>
+            <input type="text" id="itemName" required />
+
+            <label for="quantity">Quantity</label>
+            <input type="number" id="quantity" required />
+
+            <label for="location">Location</label>
+            <input type="text" id="location" required />
+
+            <button type="submit">Add Item</button>
+        </form>
+
+        <div class="card">
+            <h2>Current Inventory</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th>Location</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="inventory-table-body"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>🚨 Low Stock Items</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="low-stock-table-body"></tbody>
+            </table>
+        </div>
+
+        <section class="card">
+            <div class="section-header">
+                <h2>Low Inventory Notifications</h2>
+                <button id="clear-notifications-btn" type="button">Clear Notifications</button>
+            </div>
+
+            <table>
+                <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Recipient</th>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Location</th>
+                    <th>Message</th>
+                </tr>
+                </thead>
+                <tbody id="notifications-body"></tbody>
+            </table>
+        </section>
+    </div>
+
+    <!-- Orders Tab -->
+    <div id="tab-orders" class="tab-content">
+        <form id="order-form" class="card">
+            <h2>Create Production Order</h2>
+
+            <label for="orderId">Order ID</label>
+            <input type="number" id="orderId" required />
+
+            <label for="productName">Product Name</label>
+            <input type="text" id="productName" required />
+
+            <label for="orderQuantity">Quantity</label>
+            <input type="number" id="orderQuantity" required />
+
+            <label for="orderStatus">Status</label>
+            <select id="orderStatus" required>
+                <option value="PLANNED">PLANNED</option>
+                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                <option value="COMPLETED">COMPLETED</option>
+            </select>
+
+            <button type="submit">Add Order</button>
+        </form>
+
+        <div class="card">
+            <h2>Production Orders</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Status</th>
+                    <th>Created Date</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="orders-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BOM Tab -->
+    <div id="tab-bom" class="tab-content">
+        <form id="bom-form" class="card">
+            <h2 id="bom-form-title">Add BOM Entry</h2>
+
+            <input type="hidden" id="bomId" />
+
+            <label for="bomProductName">Product Name</label>
+            <input type="text" id="bomProductName" required placeholder="e.g. Widget" />
+
+            <label for="bomInventoryItemName">Inventory Item Name</label>
+            <input type="text" id="bomInventoryItemName" required placeholder="e.g. Steel" />
+
+            <label for="bomQuantityRequired">Quantity Required</label>
+            <input type="number" id="bomQuantityRequired" min="1" required placeholder="e.g. 2" />
+
+            <div class="form-actions">
+                <button type="submit" id="bom-submit-btn">Save</button>
+                <button type="button" id="bom-cancel-btn" class="cancel-btn" style="display:none;" onclick="resetBomForm()">Cancel</button>
+            </div>
+        </form>
+
+        <div class="card">
+            <h2>Bill of Materials</h2>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Inventory Item Name</th>
+                    <th>Quantity Required</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="bom-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recipes Tab -->
+    <div id="tab-recipes" class="tab-content">
+        <div class="card">
+            <h2>Product Recipes</h2>
+            <p class="subtitle-text">Materials required to produce each product, based on BOM entries.</p>
+            <div id="recipes-container" class="recipes-grid"></div>
+        </div>
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
