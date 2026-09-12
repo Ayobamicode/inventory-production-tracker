@@ -1,0 +1,64 @@
+<h2>How should the BOM features fit into your existing dashboard?</h2>
+<p class="subtitle">Your current page has Inventory + Production Orders. We're adding: Create BOM, Edit BOM, and View Product Recipes.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Single Page — Add BOM sections below existing content</h3>
+      <p>Add a "Bill of Materials" form and table + a "Product Recipes" viewer to the same <code>index.html</code>. Matches your current all-in-one dashboard pattern. Scrollable, everything visible.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">index.html (scrollable)</div>
+        <div class="mockup-body" style="font-size:13px;line-height:1.6;">
+          <div style="padding:8px 12px;background:#e0e7ff;border-radius:4px;margin-bottom:6px;">📦 Inventory (existing)</div>
+          <div style="padding:8px 12px;background:#e0e7ff;border-radius:4px;margin-bottom:6px;">🏭 Production Orders (existing)</div>
+          <div style="padding:8px 12px;background:#bbf7d0;border-radius:4px;margin-bottom:6px;border:2px dashed #16a34a;">🧾 <strong>Bill of Materials</strong> — form + table (NEW)</div>
+          <div style="padding:8px 12px;background:#bbf7d0;border-radius:4px;border:2px dashed #16a34a;">📋 <strong>Product Recipes</strong> — grouped view (NEW)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Tabbed Navigation — Switch between sections</h3>
+      <p>Add a tab bar at the top: <strong>Inventory | Orders | BOM | Recipes</strong>. Each tab shows/hides its section. Cleaner, less scrolling, scales to more features.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">index.html (tabbed)</div>
+        <div class="mockup-body" style="font-size:13px;line-height:1.6;">
+          <div style="display:flex;gap:0;margin-bottom:10px;">
+            <div style="padding:6px 16px;background:#dbeafe;border-radius:6px 6px 0 0;border:1px solid #93c5fd;">Inventory</div>
+            <div style="padding:6px 16px;background:#dbeafe;border-radius:6px 6px 0 0;border:1px solid #93c5fd;">Orders</div>
+            <div style="padding:6px 16px;background:#bbf7d0;border-radius:6px 6px 0 0;border:2px solid #16a34a;font-weight:bold;">BOM ✨</div>
+            <div style="padding:6px 16px;background:#bbf7d0;border-radius:6px 6px 0 0;border:2px solid #16a34a;font-weight:bold;">Recipes ✨</div>
+          </div>
+          <div style="padding:12px;background:#f0fdf4;border:2px dashed #16a34a;border-radius:0 4px 4px 4px;">
+            Active tab content shown here
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Separate Page — New <code>bom.html</code></h3>
+      <p>Create a dedicated <code>bom.html</code> page for BOM + Recipes with a nav link from the main dashboard. Full separation of concerns.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">Two pages</div>
+        <div class="mockup-body" style="font-size:13px;line-height:1.6;">
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;padding:8px;background:#e0e7ff;border-radius:4px;text-align:center;">
+              <strong>index.html</strong><br/>Inventory + Orders<br/><span style="color:#2563eb;">→ Link to BOM</span>
+            </div>
+            <div style="flex:1;padding:8px;background:#bbf7d0;border-radius:4px;text-align:center;border:2px dashed #16a34a;">
+              <strong>bom.html</strong><br/>BOM + Recipes<br/><span style="color:#16a34a;">→ Link back</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

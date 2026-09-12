@@ -1,0 +1,156 @@
+<h2>BOM Tab — Create & Edit Bill of Materials</h2>
+<p class="subtitle">This is what the BOM tab would look like. The form creates/edits entries, the table shows all BOM items.</p>
+
+<div class="mockup">
+  <div class="mockup-header">BOM Tab</div>
+  <div class="mockup-body" style="font-family:system-ui;font-size:13px;">
+    <!-- Tab bar -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e5e7eb;">
+      <div style="padding:8px 20px;color:#6b7280;cursor:pointer;">Inventory</div>
+      <div style="padding:8px 20px;color:#6b7280;cursor:pointer;">Orders</div>
+      <div style="padding:8px 20px;color:#2563eb;font-weight:600;border-bottom:2px solid #2563eb;margin-bottom:-2px;">BOM</div>
+      <div style="padding:8px 20px;color:#6b7280;cursor:pointer;">Recipes</div>
+    </div>
+
+    <!-- Form -->
+    <div style="background:#f8fafc;padding:14px;border-radius:8px;margin-bottom:16px;border:1px solid #e2e8f0;">
+      <h4 style="margin:0 0 10px 0;font-size:14px;color:#334155;">Add / Edit BOM Entry</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;">
+        <div>
+          <div style="font-size:11px;color:#64748b;margin-bottom:3px;">Product Name</div>
+          <div style="background:white;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;color:#94a3b8;font-size:12px;">e.g. Widget</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#64748b;margin-bottom:3px;">Inventory Item</div>
+          <div style="background:white;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;color:#94a3b8;font-size:12px;">e.g. Steel</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#64748b;margin-bottom:3px;">Qty Required</div>
+          <div style="background:white;border:1px solid #cbd5e1;border-radius:4px;padding:6px 8px;color:#94a3b8;font-size:12px;">e.g. 2</div>
+        </div>
+        <div style="padding-bottom:1px;">
+          <div style="background:#2563eb;color:white;padding:6px 16px;border-radius:4px;font-size:12px;text-align:center;font-weight:500;">Save</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:#f1f5f9;text-align:left;">
+          <th style="padding:8px;border-bottom:2px solid #e2e8f0;">ID</th>
+          <th style="padding:8px;border-bottom:2px solid #e2e8f0;">Product</th>
+          <th style="padding:8px;border-bottom:2px solid #e2e8f0;">Inventory Item</th>
+          <th style="padding:8px;border-bottom:2px solid #e2e8f0;">Qty Required</th>
+          <th style="padding:8px;border-bottom:2px solid #e2e8f0;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:8px;">1</td>
+          <td style="padding:8px;">Widget</td>
+          <td style="padding:8px;">Steel</td>
+          <td style="padding:8px;">2</td>
+          <td style="padding:8px;">
+            <span style="color:#059669;cursor:pointer;margin-right:8px;">Edit</span>
+            <span style="color:#dc2626;cursor:pointer;">Delete</span>
+          </td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:8px;">2</td>
+          <td style="padding:8px;">Widget</td>
+          <td style="padding:8px;">Bolt</td>
+          <td style="padding:8px;">8</td>
+          <td style="padding:8px;">
+            <span style="color:#059669;cursor:pointer;margin-right:8px;">Edit</span>
+            <span style="color:#dc2626;cursor:pointer;">Delete</span>
+          </td>
+        </tr>
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:8px;">3</td>
+          <td style="padding:8px;">Gadget</td>
+          <td style="padding:8px;">Plastic</td>
+          <td style="padding:8px;">5</td>
+          <td style="padding:8px;">
+            <span style="color:#059669;cursor:pointer;margin-right:8px;">Edit</span>
+            <span style="color:#dc2626;cursor:pointer;">Delete</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div style="height:24px;"></div>
+
+<h2>Recipes Tab — View Product Recipes</h2>
+<p class="subtitle">Groups BOM entries by product. Shows all materials needed to make each product.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Recipes Tab</div>
+  <div class="mockup-body" style="font-family:system-ui;font-size:13px;">
+    <!-- Tab bar -->
+    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:2px solid #e5e7eb;">
+      <div style="padding:8px 20px;color:#6b7280;cursor:pointer;">Inventory</div>
+      <div style="padding:8px 20px;color:#6b7280;cursor:pointer;">Orders</div>
+      <div style="padding:8px 20px;color:#6b7280;cursor:pointer;">BOM</div>
+      <div style="padding:8px 20px;color:#2563eb;font-weight:600;border-bottom:2px solid #2563eb;margin-bottom:-2px;">Recipes</div>
+    </div>
+
+    <!-- Recipe cards -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <!-- Widget card -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h4 style="margin:0;font-size:15px;color:#1e293b;">Widget</h4>
+          <span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:10px;font-size:11px;">2 materials</span>
+        </div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <tr style="border-bottom:1px solid #e2e8f0;">
+            <td style="padding:5px 0;color:#64748b;">Steel</td>
+            <td style="padding:5px 0;text-align:right;font-weight:600;">2 units</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0;color:#64748b;">Bolt</td>
+            <td style="padding:5px 0;text-align:right;font-weight:600;">8 units</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Gadget card -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h4 style="margin:0;font-size:15px;color:#1e293b;">Gadget</h4>
+          <span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:10px;font-size:11px;">1 material</span>
+        </div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <tr>
+            <td style="padding:5px 0;color:#64748b;">Plastic</td>
+            <td style="padding:5px 0;text-align:right;font-weight:600;">5 units</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="height:24px;"></div>
+<h3>Does this layout work for both tabs?</h3>
+<p class="subtitle">Click an option below or respond in the terminal with feedback.</p>
+
+<div class="options">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Looks good — proceed with this design</h3>
+      <p>BOM tab has form + table, Recipes tab shows product cards with grouped materials.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="changes" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>I'd like some changes</h3>
+      <p>Tell me in the terminal what you'd adjust.</p>
+    </div>
+  </div>
+</div>
