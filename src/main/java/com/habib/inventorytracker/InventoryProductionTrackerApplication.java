@@ -40,9 +40,9 @@ public class InventoryProductionTrackerApplication {
     @RestController
     static class HomeController {
 
-        @GetMapping("/")
+        @GetMapping("/health")
         public String home() {
-            return "Inventory Production Tracker backend is running.";
+            return "Inventory Production Tracker is healthy.";
         }
     }
 
