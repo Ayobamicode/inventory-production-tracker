@@ -4,6 +4,13 @@ A full-stack inventory and manufacturing dashboard built with Spring Boot, Java,
 
 The application tracks stock, production orders, bills of materials, product recipes, and low-stock notifications. Completing a production order automatically consumes the required inventory in a single transaction.
 
+## Live application
+
+- Dashboard: [inventory-production-tracker.onrender.com](https://inventory-production-tracker.onrender.com)
+- Health check: [inventory-production-tracker.onrender.com/health](https://inventory-production-tracker.onrender.com/health)
+
+The free Render service may take about a minute to wake after a period of inactivity.
+
 ## Features
 
 - Create, update, view, and delete inventory items
