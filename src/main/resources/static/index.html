@@ -3,186 +3,121 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Inventory Dashboard</title>
+    <meta name="theme-color" content="#183c34" />
+    <meta name="description" content="Manage your inventory, production orders, and product recipes in one workspace." />
+    <title>Inventory · Production Tracker</title>
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div class="container">
-    <h1>Inventory Dashboard</h1>
-
-    <div class="tab-bar">
-        <button class="tab active" data-tab="inventory">Inventory</button>
-        <button class="tab" data-tab="orders">Orders</button>
-        <button class="tab" data-tab="bom">BOM</button>
-        <button class="tab" data-tab="recipes">Recipes</button>
-    </div>
-
-    <!-- Inventory Tab -->
-    <div id="tab-inventory" class="tab-content active">
-        <form id="inventory-form" class="card">
-            <h2>Add Inventory Item</h2>
-
-            <label for="id">ID</label>
-            <input type="number" id="id" required />
-
-            <label for="itemName">Item Name</label>
-            <input type="text" id="itemName" required />
-
-            <label for="quantity">Quantity</label>
-            <input type="number" id="quantity" required />
-
-            <label for="location">Location</label>
-            <input type="text" id="location" required />
-
-            <button type="submit">Add Item</button>
-        </form>
-
-        <div class="card">
-            <h2>Current Inventory</h2>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Item Name</th>
-                    <th>Quantity</th>
-                    <th>Location</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody id="inventory-table-body"></tbody>
-            </table>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="icon-box" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="M3 8v9l9 5 9-5V8M12 13v9M7.5 5.5l9 5"/></symbol>
+    <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="icon-orders" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 10h6M9 14h6M9 18h3"/></symbol>
+    <symbol id="icon-layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8l10-5ZM2 12l10 5 10-5M2 16l10 5 10-5"/></symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 5v16M12 5C9 2 5 3 2 3v16c3 0 7-1 10 2 3-3 7-2 10-2V3c-3 0-7-1-10 2Z"/></symbol>
+    <symbol id="icon-alert" viewBox="0 0 24 24"><path d="m10.3 4-8 14a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 6a8 8 0 0 1 13 2l1 4M4 12l1 4a8 8 0 0 0 13 2"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+</svg>
+<a href="#main-content" class="skip-link">Skip to dashboard</a>
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Workspace navigation">
+        <div class="brand">
+            <div class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#icon-box"/></svg></div>
+            <div><span class="brand-name">Inventory<span class="brand-dot">.</span></span><span class="brand-subtitle">PRODUCTION TRACKER</span></div>
         </div>
-
-        <div class="card">
-            <h2>🚨 Low Stock Items</h2>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Item Name</th>
-                    <th>Quantity</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                </tr>
-                </thead>
-                <tbody id="low-stock-table-body"></tbody>
-            </table>
+        <div class="nav-label">WORKSPACE</div>
+        <nav class="tab-bar" role="tablist" aria-label="Dashboard sections">
+            <button id="nav-inventory" class="tab active" data-tab="inventory" role="tab" aria-selected="true" aria-controls="tab-inventory"><svg class="icon" aria-hidden="true"><use href="#icon-grid"/></svg><span>Inventory</span></button>
+            <button id="nav-orders" class="tab" data-tab="orders" role="tab" aria-selected="false" aria-controls="tab-orders" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#icon-orders"/></svg><span>Production orders</span></button>
+            <button id="nav-bom" class="tab" data-tab="bom" role="tab" aria-selected="false" aria-controls="tab-bom" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#icon-layers"/></svg><span>Bill of materials</span></button>
+            <button id="nav-recipes" class="tab" data-tab="recipes" role="tab" aria-selected="false" aria-controls="tab-recipes" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#icon-book"/></svg><span>Product recipes</span></button>
+        </nav>
+        <div class="sidebar-note">
+            <svg class="icon" aria-hidden="true"><use href="#icon-layers"/></svg>
+            <h2>From stock to finished.</h2>
+            <p>Keep materials, recipes, and production moving together.</p>
+            <div class="flow-labels"><span>Stock</span><svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg><span>Production</span></div>
         </div>
+        <div class="sidebar-footer"><span class="workspace-avatar">IP</span><div>Operations workspace<small>Inventory &amp; manufacturing</small></div></div>
+    </aside>
+    <div class="main-shell">
+        <div class="topbar"><span>Workspace <span class="breadcrumb-divider">/</span> <strong>Operations</strong></span><span class="topbar-note">Inventory &amp; production</span></div>
+        <main id="main-content" class="container" tabindex="-1">
+            <header class="page-header">
+                <div><p class="eyebrow">YOUR WORKSPACE, AT A GLANCE</p><h1 id="page-title">Inventory overview</h1><p id="page-description" class="page-description">Keep an eye on stock and keep production moving.</p></div>
+                <button id="refresh-btn" class="secondary-btn" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-refresh"/></svg>Refresh data</button>
+            </header>
+            <div id="status-message" class="status-message" role="status" aria-live="polite" hidden></div>
+            <section class="metrics-grid" aria-label="Workspace summary">
+                <article class="metric-card"><div class="metric-label">Inventory items<svg class="icon" aria-hidden="true"><use href="#icon-box"/></svg></div><div id="metric-items" class="metric-value">—</div><p>Unique items in your stock</p></article>
+                <article class="metric-card"><div class="metric-label">Units available<svg class="icon" aria-hidden="true"><use href="#icon-layers"/></svg></div><div id="metric-units" class="metric-value">—</div><p>Total quantity on hand</p></article>
+                <article class="metric-card metric-warning"><div class="metric-label">Low-stock items<svg class="icon" aria-hidden="true"><use href="#icon-alert"/></svg></div><div id="metric-low-stock" class="metric-value">—</div><p>Below 10 units · needs attention</p></article>
+                <article class="metric-card"><div class="metric-label">Open orders<svg class="icon" aria-hidden="true"><use href="#icon-orders"/></svg></div><div id="metric-orders" class="metric-value">—</div><p>Planned or in progress</p></article>
+            </section>
 
-        <section class="card">
-            <div class="section-header">
-                <h2>Low Inventory Notifications</h2>
-                <button id="clear-notifications-btn" type="button">Clear Notifications</button>
-            </div>
+            <section id="tab-inventory" class="tab-content active" role="tabpanel" aria-labelledby="nav-inventory" tabindex="0">
+                <div class="workspace-grid">
+                    <section class="card table-card">
+                        <div class="section-header"><div><div class="heading-line"><h2>Current inventory</h2><span id="inventory-count" class="count-badge">Loading</span></div><p class="subtitle-text">Every item, quantity, and location in one place.</p></div></div>
+                        <div class="table-toolbar"><div class="search-field"><svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg><label class="sr-only" for="inventory-search">Search inventory</label><input id="inventory-search" type="search" placeholder="Search items or locations…" autocomplete="off"/></div><label class="sr-only" for="inventory-filter">Filter inventory</label><select id="inventory-filter"><option value="all">All stock levels</option><option value="low-stock">Low stock only</option></select></div>
+                        <div class="table-scroll" role="region" aria-label="Current inventory table" tabindex="0"><table><thead><tr><th scope="col">ID</th><th scope="col">Item name</th><th scope="col">Quantity</th><th scope="col">Location</th><th scope="col">Actions</th></tr></thead><tbody id="inventory-table-body"></tbody></table></div>
+                        <div class="table-footnote"><span class="legend-dot"></span>Highlighted items have fewer than 10 units in stock.</div>
+                    </section>
+                    <form id="inventory-form" class="card entry-form">
+                        <div class="form-heading"><span class="form-icon"><svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg></span><div><h2 id="inventory-form-title">Add inventory item</h2><p class="subtitle-text">Make room for what’s next.</p></div></div>
+                        <div class="field-row"><div class="field"><label for="id">Item ID</label><input type="number" id="id" required placeholder="e.g. 101" /></div><div class="field"><label for="quantity">Quantity</label><input type="number" id="quantity" min="0" required placeholder="0" /></div></div>
+                        <div class="field"><label for="itemName">Item name</label><input type="text" id="itemName" required placeholder="e.g. Steel sheet" /></div>
+                        <div class="field"><label for="location">Location</label><input type="text" id="location" required placeholder="e.g. Warehouse A" /></div>
+                        <div class="form-actions"><button type="submit" id="inventory-submit-btn">Add item</button><button type="button" id="inventory-cancel-btn" class="cancel-btn" hidden>Cancel</button></div>
+                        <p class="form-note">Stock levels update automatically when production is completed.</p>
+                    </form>
+                </div>
+                <section class="card table-card attention-card">
+                    <div class="section-header"><div class="section-title-icon"><span class="attention-icon"><svg class="icon" aria-hidden="true"><use href="#icon-alert"/></svg></span><div><h2>Needs attention</h2><p class="subtitle-text">Replenish these items to keep production on track.</p></div></div><span class="threshold-label">Low stock &lt; 10 units</span></div>
+                    <div class="table-scroll" role="region" aria-label="Low-stock inventory table" tabindex="0"><table><thead><tr><th scope="col">ID</th><th scope="col">Item name</th><th scope="col">Quantity</th><th scope="col">Location</th><th scope="col">Status</th></tr></thead><tbody id="low-stock-table-body"></tbody></table></div>
+                </section>
+                <section class="card table-card notifications-card">
+                    <div class="section-header"><div class="section-title-icon"><svg class="icon muted-icon" aria-hidden="true"><use href="#icon-bell"/></svg><div><h2>Stock notifications</h2><p class="subtitle-text">Your latest low-inventory updates.</p></div></div><button id="clear-notifications-btn" class="secondary-btn compact-btn" type="button">Clear notifications</button></div>
+                    <div class="table-scroll" role="region" aria-label="Stock notifications table" tabindex="0"><table><thead><tr><th scope="col">Time</th><th scope="col">Recipient</th><th scope="col">Item</th><th scope="col">Quantity</th><th scope="col">Location</th><th scope="col">Message</th></tr></thead><tbody id="notifications-body"></tbody></table></div>
+                </section>
+            </section>
 
-            <table>
-                <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Recipient</th>
-                    <th>Item</th>
-                    <th>Quantity</th>
-                    <th>Location</th>
-                    <th>Message</th>
-                </tr>
-                </thead>
-                <tbody id="notifications-body"></tbody>
-            </table>
-        </section>
+            <section id="tab-orders" class="tab-content" role="tabpanel" aria-labelledby="nav-orders" tabindex="0" hidden>
+                <div class="workspace-grid">
+                    <section class="card table-card"><div class="section-header"><div><h2>Production orders</h2><p class="subtitle-text">Follow each product from planned to completed.</p></div></div><div class="table-scroll" role="region" aria-label="Production orders table" tabindex="0"><table><thead><tr><th scope="col">ID</th><th scope="col">Product</th><th scope="col">Quantity</th><th scope="col">Status</th><th scope="col">Created</th><th scope="col">Actions</th></tr></thead><tbody id="orders-table-body"></tbody></table></div></section>
+                    <form id="order-form" class="card entry-form"><div class="form-heading"><span class="form-icon"><svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg></span><div><h2 id="order-form-title">Create production order</h2><p class="subtitle-text">Plan your next production run.</p></div></div>
+                        <div class="field-row"><div class="field"><label for="orderId">Order ID</label><input type="number" id="orderId" required placeholder="e.g. 1001" /></div><div class="field"><label for="orderQuantity">Quantity</label><input type="number" id="orderQuantity" min="1" required placeholder="1" /></div></div>
+                        <div class="field"><label for="productName">Product name</label><input type="text" id="productName" required placeholder="e.g. Workbench" /></div>
+                        <div class="field"><label for="orderStatus">Status</label><select id="orderStatus" required><option value="PLANNED">Planned</option><option value="IN_PROGRESS">In progress</option><option value="COMPLETED">Completed</option></select></div>
+                        <div class="form-actions"><button type="submit" id="order-submit-btn">Add order</button><button type="button" id="order-cancel-btn" class="cancel-btn" hidden>Cancel</button></div><p class="form-note">Completing an order consumes the materials defined in its recipe.</p>
+                    </form>
+                </div>
+            </section>
+
+            <section id="tab-bom" class="tab-content" role="tabpanel" aria-labelledby="nav-bom" tabindex="0" hidden>
+                <div class="workspace-grid">
+                    <section class="card table-card"><div class="section-header"><div><h2>Bill of materials</h2><p class="subtitle-text">The building blocks behind every finished product.</p></div></div><div class="table-scroll" role="region" aria-label="Bill of materials table" tabindex="0"><table><thead><tr><th scope="col">ID</th><th scope="col">Product</th><th scope="col">Inventory item</th><th scope="col">Required units</th><th scope="col">Actions</th></tr></thead><tbody id="bom-table-body"></tbody></table></div></section>
+                    <form id="bom-form" class="card entry-form"><div class="form-heading"><span class="form-icon"><svg class="icon" aria-hidden="true"><use href="#icon-plus"/></svg></span><div><h2 id="bom-form-title">Add BOM entry</h2><p class="subtitle-text">Connect a product to its materials.</p></div></div>
+                        <input type="hidden" id="bomId" />
+                        <div class="field"><label for="bomProductName">Product name</label><input type="text" id="bomProductName" required placeholder="e.g. Workbench" /></div>
+                        <div class="field"><label for="bomInventoryItemName">Inventory item name</label><input type="text" id="bomInventoryItemName" required placeholder="e.g. Steel sheet" /></div>
+                        <div class="field"><label for="bomQuantityRequired">Quantity per product</label><input type="number" id="bomQuantityRequired" min="1" required placeholder="e.g. 2" /></div>
+                        <div class="form-actions"><button type="submit" id="bom-submit-btn">Save entry</button><button type="button" id="bom-cancel-btn" class="cancel-btn" hidden>Cancel</button></div><p class="form-note">Use the same item name as your inventory so materials match correctly.</p>
+                    </form>
+                </div>
+            </section>
+
+            <section id="tab-recipes" class="tab-content" role="tabpanel" aria-labelledby="nav-recipes" tabindex="0" hidden>
+                <section class="card recipes-section"><div class="section-header"><div><h2>Product recipes</h2><p class="subtitle-text">A clear view of the materials needed to make one of each product.</p></div><span class="count-badge">From your bill of materials</span></div><div id="recipes-container" class="recipes-grid"></div></section>
+            </section>
+            <footer class="page-footer"><span>Inventory Production Tracker</span><span>A little clarity. A smoother operation.</span></footer>
+        </main>
     </div>
-
-    <!-- Orders Tab -->
-    <div id="tab-orders" class="tab-content">
-        <form id="order-form" class="card">
-            <h2>Create Production Order</h2>
-
-            <label for="orderId">Order ID</label>
-            <input type="number" id="orderId" required />
-
-            <label for="productName">Product Name</label>
-            <input type="text" id="productName" required />
-
-            <label for="orderQuantity">Quantity</label>
-            <input type="number" id="orderQuantity" required />
-
-            <label for="orderStatus">Status</label>
-            <select id="orderStatus" required>
-                <option value="PLANNED">PLANNED</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">COMPLETED</option>
-            </select>
-
-            <button type="submit">Add Order</button>
-        </form>
-
-        <div class="card">
-            <h2>Production Orders</h2>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Product Name</th>
-                    <th>Quantity</th>
-                    <th>Status</th>
-                    <th>Created Date</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody id="orders-table-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- BOM Tab -->
-    <div id="tab-bom" class="tab-content">
-        <form id="bom-form" class="card">
-            <h2 id="bom-form-title">Add BOM Entry</h2>
-
-            <input type="hidden" id="bomId" />
-
-            <label for="bomProductName">Product Name</label>
-            <input type="text" id="bomProductName" required placeholder="e.g. Widget" />
-
-            <label for="bomInventoryItemName">Inventory Item Name</label>
-            <input type="text" id="bomInventoryItemName" required placeholder="e.g. Steel" />
-
-            <label for="bomQuantityRequired">Quantity Required</label>
-            <input type="number" id="bomQuantityRequired" min="1" required placeholder="e.g. 2" />
-
-            <div class="form-actions">
-                <button type="submit" id="bom-submit-btn">Save</button>
-                <button type="button" id="bom-cancel-btn" class="cancel-btn" style="display:none;" onclick="resetBomForm()">Cancel</button>
-            </div>
-        </form>
-
-        <div class="card">
-            <h2>Bill of Materials</h2>
-            <table>
-                <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Product Name</th>
-                    <th>Inventory Item Name</th>
-                    <th>Quantity Required</th>
-                    <th>Actions</th>
-                </tr>
-                </thead>
-                <tbody id="bom-table-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Recipes Tab -->
-    <div id="tab-recipes" class="tab-content">
-        <div class="card">
-            <h2>Product Recipes</h2>
-            <p class="subtitle-text">Materials required to produce each product, based on BOM entries.</p>
-            <div id="recipes-container" class="recipes-grid"></div>
-        </div>
-    </div>
-
 </div>
-
 <script src="script.js"></script>
 </body>
 </html>
