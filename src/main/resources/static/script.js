@@ -1,549 +1,530 @@
-// === API URLs ===
 const apiUrl = "/api/inventory";
 const orderApiUrl = "/api/orders";
 const bomApiUrl = "/api/bom";
+const byId = id => document.getElementById(id);
+const form = byId("inventory-form");
+const orderForm = byId("order-form");
+const bomForm = byId("bom-form");
+const tableBody = byId("inventory-table-body");
+const lowStockTableBody = byId("low-stock-table-body");
+const ordersTableBody = byId("orders-table-body");
+const bomTableBody = byId("bom-table-body");
+const notificationsBody = byId("notifications-body");
+const recipesContainer = byId("recipes-container");
+const tabs = [...document.querySelectorAll(".tab-bar .tab")];
+let inventory = [];
+let inventoryState = "loading";
+let activeTab = "inventory";
+let editingInventoryId = null;
+let editingOrder = null;
 
-// === DOM References ===
-const form = document.getElementById("inventory-form");
-const tableBody = document.getElementById("inventory-table-body");
-const lowStockTableBody = document.getElementById("low-stock-table-body");
-const orderForm = document.getElementById("order-form");
-const ordersTableBody = document.getElementById("orders-table-body");
-const bomForm = document.getElementById("bom-form");
-const bomTableBody = document.getElementById("bom-table-body");
-const recipesContainer = document.getElementById("recipes-container");
+// A response from an earlier save must not clear a newer draft.
+const formRevisions = new WeakMap();
+function markDraftChanged(targetForm) {
+    formRevisions.set(targetForm, (formRevisions.get(targetForm) || 0) + 1);
+}
+[form, orderForm, bomForm].forEach(targetForm => {
+    formRevisions.set(targetForm, 0);
+    targetForm.addEventListener("input", () => markDraftChanged(targetForm));
+});
 
-// === Tab Switching ===
+const tabDetails = {
+    inventory: ["Inventory overview", "Keep stock organized and production moving."],
+    orders: ["Production orders", "Plan production and track every order from start to finish."],
+    bom: ["Bill of materials", "Define the materials each product needs."],
+    recipes: ["Product recipes", "See the materials behind every product."]
+};
+
+// Render values as text so names and locations remain plain text.
+function element(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined && text !== null) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+}
+
+function setText(id, value) {
+    const node = byId(id);
+    if (node) node.textContent = value;
+}
+
+function notice(message, tone = "success") {
+    const node = byId("status-message");
+    node.textContent = message;
+    node.dataset.tone = tone;
+    node.hidden = false;
+}
+
+function tableMessage(body, columns, message, error = false) {
+    const row = element("tr");
+    const cell = element("td", message, `table-message${error ? " is-error" : ""}`);
+    cell.colSpan = columns;
+    row.append(cell);
+    body.replaceChildren(row);
+}
+
+function cells(row, values) {
+    values.forEach(value => row.append(element("td", value ?? "")));
+}
+
+function actionButton(label, className, action, description) {
+    const button = element("button", label, className);
+    button.type = "button";
+    button.setAttribute("aria-label", description);
+    button.addEventListener("click", async () => {
+        button.disabled = true;
+        try { await action(); } finally { button.disabled = false; }
+    });
+    return button;
+}
+
+function actions(row, label, edit, remove) {
+    const cell = element("td", null, "actions");
+    cell.append(
+        actionButton("Edit", "edit-btn", edit, `Edit ${label}`),
+        actionButton("Delete", "delete-btn", remove, `Delete ${label}`)
+    );
+    row.append(cell);
+}
+
+async function request(url, options = {}) {
+    const response = await fetch(url, options);
+    if (!response.ok) {
+        const detail = await response.text();
+        let message = detail;
+        try { message = JSON.parse(detail).message || ""; } catch { /* Plain text errors are also supported. */ }
+        if (typeof message !== "string" || !message || message.length > 240 || message.trim().startsWith("<")) {
+            message = `Request failed (${response.status}). Please try again.`;
+        }
+        throw new Error(message);
+    }
+    return response;
+}
+
+async function readList(url) {
+    const response = await request(url);
+    const items = await response.json();
+    if (!Array.isArray(items)) throw new Error("The server returned an unexpected response.");
+    return items;
+}
+
+function save(url, method, value) {
+    return request(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(value)
+    });
+}
+
+// Only the latest request may render a table after a refresh or tab switch.
+const tableRequests = new WeakMap();
+async function loadTable(body, columns, url, render, emptyText, onError) {
+    const requestId = (tableRequests.get(body) || 0) + 1;
+    tableRequests.set(body, requestId);
+    body.setAttribute("aria-busy", "true");
+    tableMessage(body, columns, "Loading…");
+    try {
+        const items = await readList(url);
+        if (tableRequests.get(body) !== requestId) return null;
+        body.replaceChildren();
+        render(items);
+        if (!items.length) tableMessage(body, columns, emptyText);
+        return true;
+    } catch (error) {
+        if (tableRequests.get(body) !== requestId) return null;
+        tableMessage(body, columns, `Unable to load data. ${error.message}`, true);
+        if (onError) onError();
+        return false;
+    } finally {
+        if (tableRequests.get(body) === requestId) body.setAttribute("aria-busy", "false");
+    }
+}
+
 function switchTab(tabName) {
-    document.querySelectorAll(".tab-bar .tab").forEach(tab => {
-        tab.classList.remove("active");
+    if (!tabDetails[tabName]) return;
+    activeTab = tabName;
+    tabs.forEach(tab => {
+        const selected = tab.dataset.tab === tabName;
+        tab.classList.toggle("active", selected);
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
     });
-
-    const clickedTab = document.querySelector(`.tab-bar .tab[data-tab="${tabName}"]`);
-    if (clickedTab) {
-        clickedTab.classList.add("active");
-    }
-
-    document.querySelectorAll(".tab-content").forEach(content => {
-        content.classList.remove("active");
-        content.style.display = "none";
+    document.querySelectorAll(".tab-content").forEach(panel => {
+        const selected = panel.id === `tab-${tabName}`;
+        panel.classList.toggle("active", selected);
+        panel.hidden = !selected;
     });
-
-    const targetContent = document.getElementById(`tab-${tabName}`);
-    if (targetContent) {
-        targetContent.classList.add("active");
-        targetContent.style.display = "block";
-    }
-
-    if (tabName === "inventory") {
-        loadInventory();
-        loadLowStockItems();
-        loadNotifications();
-    } else if (tabName === "orders") {
-        loadOrders();
-    } else if (tabName === "bom") {
-        loadBom();
-    } else if (tabName === "recipes") {
-        loadRecipes();
-    }
+    setText("page-title", tabDetails[tabName][0]);
+    setText("page-description", tabDetails[tabName][1]);
+    if (tabName === "inventory") return refreshInventory();
+    if (tabName === "orders") return loadOrders();
+    if (tabName === "bom") return loadBom();
+    return loadRecipes();
 }
 
-// === Inventory Functions ===
+// Filtering uses cached inventory without changing workspace totals.
+function renderInventory() {
+    if (inventoryState !== "ready") return;
+    const query = (byId("inventory-search")?.value || "").trim().toLocaleLowerCase();
+    const lowOnly = byId("inventory-filter")?.value === "low-stock";
+    const filtered = inventory.filter(item => {
+        const matches = [item.id, item.itemName, item.location]
+            .some(value => String(value ?? "").toLocaleLowerCase().includes(query));
+        return matches && (!lowOnly || item.quantity < 10);
+    });
+    setText("inventory-count", `${filtered.length} ${filtered.length === 1 ? "item" : "items"}`);
+    tableBody.replaceChildren();
+    if (!filtered.length) {
+        tableMessage(tableBody, 5, inventory.length ? "No items match your search or filter." : "No inventory yet. Add your first item to get started.");
+        return;
+    }
+    filtered.forEach(item => {
+        const row = element("tr");
+        row.classList.toggle("low-stock-row", item.quantity < 10);
+        cells(row, [item.id, item.itemName, item.quantity, item.location]);
+        actions(row, item.itemName, () => editItem(item), () => deleteItem(item.id));
+        tableBody.append(row);
+    });
+}
+
 async function loadInventory() {
-    try {
-        const response = await fetch(apiUrl);
-        const items = await response.json();
-
-        tableBody.innerHTML = "";
-
-        items.forEach(item => {
-            const row = document.createElement("tr");
-
-            if (item.quantity < 10) {
-                row.classList.add("low-stock-row");
-            }
-
-            row.innerHTML = `
-                <td>${item.id}</td>
-                <td>${item.itemName}</td>
-                <td>${item.quantity}</td>
-                <td>${item.location}</td>
-                <td class="actions">
-                    <button class="edit-btn" onclick="editItem(${item.id}, '${item.itemName}', ${item.quantity}, '${item.location}')">Edit</button>
-                    <button class="delete-btn" onclick="deleteItem(${item.id})">Delete</button>
-                </td>
-            `;
-
-            tableBody.appendChild(row);
-        });
-    } catch (error) {
-        console.error("Error loading inventory:", error);
-    }
+    inventoryState = "loading";
+    setText("inventory-count", "Loading…");
+    return loadTable(tableBody, 5, apiUrl, items => {
+        inventory = items;
+        inventoryState = "ready";
+        setText("metric-items", items.length.toLocaleString());
+        setText("metric-units", items.reduce((total, item) => total + Number(item.quantity || 0), 0).toLocaleString());
+        renderInventory();
+    }, "No inventory yet. Add your first item to get started.", () => {
+        inventoryState = "error";
+        setText("inventory-count", "Unavailable");
+        setText("metric-items", "—");
+        setText("metric-units", "—");
+    });
 }
 
-async function loadLowStockItems() {
-    try {
-        const response = await fetch(`${apiUrl}/low-stock`);
-        const items = await response.json();
-
-        lowStockTableBody.innerHTML = "";
-
+function loadLowStockItems() {
+    return loadTable(lowStockTableBody, 5, `${apiUrl}/low-stock`, items => {
+        setText("metric-low-stock", items.length.toLocaleString());
         items.forEach(item => {
-            const row = document.createElement("tr");
-            row.classList.add("low-stock-row");
-
-            row.innerHTML = `
-                <td>${item.id}</td>
-                <td>⚠ ${item.itemName}</td>
-                <td>${item.quantity}</td>
-                <td>${item.location}</td>
-                <td><span class="warning-badge">Reorder Needed</span></td>
-            `;
-
-            lowStockTableBody.appendChild(row);
+            const row = element("tr", null, "low-stock-row");
+            cells(row, [item.id, item.itemName, item.quantity, item.location]);
+            const status = element("td");
+            status.append(element("span", "Reorder needed", "warning-badge"));
+            row.append(status);
+            lowStockTableBody.append(row);
         });
-    } catch (error) {
-        console.error("Error loading low stock items:", error);
-    }
+    }, "Stock levels look good. No items need reordering.", () => setText("metric-low-stock", "—"));
+}
+
+function refreshInventory() {
+    return Promise.all([loadInventory(), loadLowStockItems(), loadNotifications()]);
+}
+
+function formMode(prefix, editing, title, buttonText) {
+    setText(`${prefix}-form-title`, title);
+    setText(`${prefix}-submit-btn`, buttonText);
+    byId(`${prefix}-cancel-btn`).hidden = !editing;
+}
+
+function editItem(item) {
+    markDraftChanged(form);
+    editingInventoryId = item.id;
+    byId("id").value = item.id;
+    byId("id").disabled = true;
+    byId("itemName").value = item.itemName;
+    byId("quantity").value = item.quantity;
+    byId("location").value = item.location;
+    formMode("inventory", true, "Edit inventory item", "Save changes");
+    byId("itemName").focus();
+}
+
+function resetInventoryForm() {
+    markDraftChanged(form);
+    editingInventoryId = null;
+    form.reset();
+    byId("id").disabled = false;
+    formMode("inventory", false, "Add inventory item", "Add item");
 }
 
 async function deleteItem(id) {
     try {
-        await fetch(`${apiUrl}/${id}`, {
-            method: "DELETE"
-        });
-        loadInventory();
-        loadLowStockItems();
-        loadNotifications();
-    } catch (error) {
-        console.error("Error deleting item:", error);
-    }
+        await request(`${apiUrl}/${id}`, { method: "DELETE" });
+        if (editingInventoryId === id) resetInventoryForm();
+        notice("Inventory item deleted.");
+        await refreshInventory();
+    } catch (error) { notice(error.message, "error"); }
 }
 
-async function editItem(id, itemName, quantity, location) {
-    const newItemName = prompt("Enter new item name:", itemName);
-    const newQuantity = prompt("Enter new quantity:", quantity);
-    const newLocation = prompt("Enter new location:", location);
-
-    if (newItemName === null || newQuantity === null || newLocation === null) {
-        return;
-    }
-
-    const updatedItem = {
-        id,
-        itemName: newItemName,
-        quantity: Number(newQuantity),
-        location: newLocation
-    };
-
-    try {
-        await fetch(`${apiUrl}/${id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(updatedItem)
-        });
-
-        loadInventory();
-        loadLowStockItems();
-        loadNotifications();
-    } catch (error) {
-        console.error("Error updating item:", error);
-    }
-}
-
-form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
+form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const revision = formRevisions.get(form);
+    const editing = editingInventoryId !== null;
     const item = {
-        id: Number(document.getElementById("id").value),
-        itemName: document.getElementById("itemName").value,
-        quantity: Number(document.getElementById("quantity").value),
-        location: document.getElementById("location").value
+        id: editing ? editingInventoryId : Number(byId("id").value),
+        itemName: byId("itemName").value,
+        quantity: Number(byId("quantity").value),
+        location: byId("location").value
     };
-
+    const button = byId("inventory-submit-btn");
+    button.disabled = true;
     try {
-        await fetch(apiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(item)
-        });
-
-        form.reset();
-        loadInventory();
-        loadLowStockItems();
-        loadNotifications();
-    } catch (error) {
-        console.error("Error adding item:", error);
-    }
+        await save(editing ? `${apiUrl}/${item.id}` : apiUrl, editing ? "PUT" : "POST", item);
+        if (formRevisions.get(form) === revision) resetInventoryForm();
+        notice(editing ? "Inventory item updated." : "Inventory item added.");
+        await refreshInventory();
+    } catch (error) { notice(error.message, "error"); }
+    finally { button.disabled = false; }
 });
 
-// === Orders Functions ===
+// Orders keep their original creation date when edited.
 function getStatusBadgeClass(status) {
-    if (status === "PLANNED") return "status-badge status-planned";
-    if (status === "IN_PROGRESS") return "status-badge status-in-progress";
-    if (status === "COMPLETED") return "status-badge status-completed";
-    return "status-badge";
+    const classes = { PLANNED: "status-planned", IN_PROGRESS: "status-in-progress", COMPLETED: "status-completed" };
+    return `status-badge ${classes[status] || ""}`;
 }
 
-async function loadOrders() {
-    try {
-        const response = await fetch(orderApiUrl);
-        const orders = await response.json();
-
-        ordersTableBody.innerHTML = "";
-
+function loadOrders() {
+    return loadTable(ordersTableBody, 6, orderApiUrl, orders => {
+        setText("metric-orders", orders.filter(order => order.status !== "COMPLETED").length.toLocaleString());
         orders.forEach(order => {
-            const row = document.createElement("tr");
-
-            row.innerHTML = `
-                <td>${order.id}</td>
-                <td>${order.productName}</td>
-                <td>${order.quantity}</td>
-                <td><span class="${getStatusBadgeClass(order.status)}">${order.status}</span></td>
-                <td>${order.createdDate ?? ""}</td>
-                <td class="actions">
-                    <button class="edit-btn" onclick="editOrder(${order.id}, '${order.productName}', ${order.quantity}, '${order.status}', '${order.createdDate ?? ""}')">Edit</button>
-                    <button class="delete-btn" onclick="deleteOrder(${order.id})">Delete</button>
-                </td>
-            `;
-
-            ordersTableBody.appendChild(row);
+            const row = element("tr");
+            cells(row, [order.id, order.productName, order.quantity]);
+            const statusCell = element("td");
+            const labels = { PLANNED: "Planned", IN_PROGRESS: "In progress", COMPLETED: "Completed" };
+            statusCell.append(element("span", labels[order.status] || order.status, getStatusBadgeClass(order.status)));
+            row.append(statusCell);
+            cells(row, [order.createdDate]);
+            actions(row, order.productName, () => editOrder(order), () => deleteOrder(order.id));
+            ordersTableBody.append(row);
         });
-    } catch (error) {
-        console.error("Error loading orders:", error);
-    }
+    }, "No production orders yet. Create an order to get started.", () => setText("metric-orders", "—"));
+}
+
+function editOrder(order) {
+    markDraftChanged(orderForm);
+    editingOrder = order;
+    byId("orderId").value = order.id;
+    byId("orderId").disabled = true;
+    byId("productName").value = order.productName;
+    byId("orderQuantity").value = order.quantity;
+    byId("orderStatus").value = order.status;
+    formMode("order", true, "Edit production order", "Save changes");
+    byId("productName").focus();
+}
+
+function resetOrderForm() {
+    markDraftChanged(orderForm);
+    editingOrder = null;
+    orderForm.reset();
+    byId("orderId").disabled = false;
+    formMode("order", false, "Create production order", "Add order");
 }
 
 async function deleteOrder(id) {
     try {
-        await fetch(`${orderApiUrl}/${id}`, {
-            method: "DELETE"
-        });
-
-        loadOrders();
-    } catch (error) {
-        console.error("Error deleting order:", error);
-    }
+        await request(`${orderApiUrl}/${id}`, { method: "DELETE" });
+        if (editingOrder?.id === id) resetOrderForm();
+        notice("Production order deleted.");
+        await loadOrders();
+    } catch (error) { notice(error.message, "error"); }
 }
 
-async function editOrder(id, productName, quantity, status, createdDate) {
-    const newProductName = prompt("Enter new product name:", productName);
-    const newQuantity = prompt("Enter new quantity:", quantity);
-    const newStatus = prompt("Enter new status (PLANNED, IN_PROGRESS, COMPLETED):", status);
-
-    if (newProductName === null || newQuantity === null || newStatus === null) {
-        return;
-    }
-
-    const updatedOrder = {
-        id,
-        productName: newProductName,
-        quantity: Number(newQuantity),
-        status: newStatus,
-        createdDate: createdDate || new Date().toISOString().split("T")[0]
-    };
-
-    try {
-        const response = await fetch(`${orderApiUrl}/${id}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(updatedOrder)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || "Failed to update order");
-        }
-
-        loadOrders();
-        loadInventory();
-        loadLowStockItems();
-        loadNotifications();
-    } catch (error) {
-        console.error("Error updating order:", error);
-        alert(error.message);
-    }
-}
-
-orderForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
+orderForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const revision = formRevisions.get(orderForm);
+    const editing = editingOrder !== null;
     const order = {
-        id: Number(document.getElementById("orderId").value),
-        productName: document.getElementById("productName").value,
-        quantity: Number(document.getElementById("orderQuantity").value),
-        status: document.getElementById("orderStatus").value,
-        createdDate: new Date().toISOString().split("T")[0]
+        id: editing ? editingOrder.id : Number(byId("orderId").value),
+        productName: byId("productName").value,
+        quantity: Number(byId("orderQuantity").value),
+        status: byId("orderStatus").value,
+        createdDate: editingOrder?.createdDate || new Date().toISOString().split("T")[0]
     };
-
+    const button = byId("order-submit-btn");
+    button.disabled = true;
     try {
-        const response = await fetch(orderApiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(order)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || "Failed to create order");
-        }
-
-        orderForm.reset();
-        loadOrders();
-        loadInventory();
-        loadLowStockItems();
-        loadNotifications();
-    } catch (error) {
-        console.error("Error adding order:", error);
-        alert(error.message);
-    }
+        await save(editing ? `${orderApiUrl}/${order.id}` : orderApiUrl, editing ? "PUT" : "POST", order);
+        if (formRevisions.get(orderForm) === revision) resetOrderForm();
+        notice(editing ? "Production order updated." : "Production order added.");
+        await Promise.all([loadOrders(), refreshInventory()]);
+    } catch (error) { notice(error.message, "error"); }
+    finally { button.disabled = false; }
 });
 
-// === BOM Functions ===
-async function loadBom() {
-    try {
-        const response = await fetch(bomApiUrl);
-        const entries = await response.json();
-
-        bomTableBody.innerHTML = "";
-
+// Bill of materials and recipes use the same source data.
+function loadBom() {
+    return loadTable(bomTableBody, 5, bomApiUrl, entries => {
         entries.forEach(entry => {
-            const row = document.createElement("tr");
-
-            row.innerHTML = `
-                <td>${entry.id}</td>
-                <td>${entry.productName}</td>
-                <td>${entry.inventoryItemName}</td>
-                <td>${entry.quantityRequired}</td>
-                <td class="actions">
-                    <button class="edit-btn" onclick="editBom(${entry.id}, '${entry.productName}', '${entry.inventoryItemName}', ${entry.quantityRequired})">Edit</button>
-                    <button class="delete-btn" onclick="deleteBom(${entry.id})">Delete</button>
-                </td>
-            `;
-
-            bomTableBody.appendChild(row);
+            const row = element("tr");
+            cells(row, [entry.id, entry.productName, entry.inventoryItemName, entry.quantityRequired]);
+            actions(row, `${entry.productName} material`, () => editBom(entry), () => deleteBom(entry.id));
+            bomTableBody.append(row);
         });
-    } catch (error) {
-        console.error("Error loading BOM:", error);
-    }
+    }, "No materials defined yet. Add a BOM entry to build a recipe.");
 }
 
-function editBom(id, productName, inventoryItemName, quantityRequired) {
-    document.getElementById("bomId").value = id;
-    document.getElementById("bomProductName").value = productName;
-    document.getElementById("bomInventoryItemName").value = inventoryItemName;
-    document.getElementById("bomQuantityRequired").value = quantityRequired;
-    document.getElementById("bom-form-title").textContent = "Edit BOM Entry";
-    document.getElementById("bom-submit-btn").textContent = "Update";
-    document.getElementById("bom-cancel-btn").style.display = "inline-block";
+function editBom(entry) {
+    markDraftChanged(bomForm);
+    byId("bomId").value = entry.id;
+    byId("bomProductName").value = entry.productName;
+    byId("bomInventoryItemName").value = entry.inventoryItemName;
+    byId("bomQuantityRequired").value = entry.quantityRequired;
+    formMode("bom", true, "Edit BOM entry", "Save changes");
+    byId("bomProductName").focus();
 }
 
 function resetBomForm() {
+    markDraftChanged(bomForm);
     bomForm.reset();
-    document.getElementById("bomId").value = "";
-    document.getElementById("bom-form-title").textContent = "Add BOM Entry";
-    document.getElementById("bom-submit-btn").textContent = "Save";
-    document.getElementById("bom-cancel-btn").style.display = "none";
+    byId("bomId").value = "";
+    formMode("bom", false, "Add BOM entry", "Save entry");
 }
 
 async function deleteBom(id) {
-    if (!confirm("Delete this BOM entry?")) {
-        return;
-    }
-
+    if (!confirm("Delete this BOM entry?")) return;
     try {
-        const response = await fetch(`${bomApiUrl}/${id}`, {
-            method: "DELETE"
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || "Failed to delete BOM entry");
-        }
-
-        loadBom();
-    } catch (error) {
-        console.error("Error deleting BOM entry:", error);
-        alert(error.message);
-    }
+        await request(`${bomApiUrl}/${id}`, { method: "DELETE" });
+        if (byId("bomId").value === String(id)) resetBomForm();
+        notice("BOM entry deleted.");
+        await loadBom();
+    } catch (error) { notice(error.message, "error"); }
 }
 
-bomForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const bomId = document.getElementById("bomId").value;
+bomForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const revision = formRevisions.get(bomForm);
+    const id = byId("bomId").value;
     const entry = {
-        productName: document.getElementById("bomProductName").value,
-        inventoryItemName: document.getElementById("bomInventoryItemName").value,
-        quantityRequired: Number(document.getElementById("bomQuantityRequired").value)
+        productName: byId("bomProductName").value,
+        inventoryItemName: byId("bomInventoryItemName").value,
+        quantityRequired: Number(byId("bomQuantityRequired").value)
     };
-
+    const button = byId("bom-submit-btn");
+    button.disabled = true;
     try {
-        let response;
-        if (bomId) {
-            response = await fetch(`${bomApiUrl}/${bomId}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(entry)
-            });
-        } else {
-            response = await fetch(bomApiUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(entry)
-            });
-        }
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || "Failed to save BOM entry");
-        }
-
-        resetBomForm();
-        loadBom();
-    } catch (error) {
-        console.error("Error saving BOM entry:", error);
-        alert(error.message);
-    }
+        await save(id ? `${bomApiUrl}/${id}` : bomApiUrl, id ? "PUT" : "POST", entry);
+        if (formRevisions.get(bomForm) === revision) resetBomForm();
+        notice(id ? "BOM entry updated." : "BOM entry added.");
+        await loadBom();
+    } catch (error) { notice(error.message, "error"); }
+    finally { button.disabled = false; }
 });
 
-// === Recipes Function ===
+let recipeRequestId = 0;
 async function loadRecipes() {
+    const requestId = ++recipeRequestId;
+    recipesContainer.setAttribute("aria-busy", "true");
+    recipesContainer.replaceChildren(element("div", "Loading recipes…", "no-data"));
     try {
-        const response = await fetch(bomApiUrl);
-        const entries = await response.json();
-
-        recipesContainer.innerHTML = "";
-
-        if (entries.length === 0) {
-            recipesContainer.innerHTML = '<div class="no-data">No BOM entries yet. Add entries in the BOM tab to see recipes here.</div>';
-            return;
+        const entries = await readList(bomApiUrl);
+        if (requestId !== recipeRequestId) return null;
+        recipesContainer.replaceChildren();
+        if (!entries.length) {
+            recipesContainer.append(element("div", "No recipes yet. Add materials in the BOM tab to get started.", "no-data"));
         }
-
-        const grouped = {};
+        const grouped = new Map();
         entries.forEach(entry => {
-            if (!grouped[entry.productName]) {
-                grouped[entry.productName] = [];
-            }
-            grouped[entry.productName].push(entry);
+            if (!grouped.has(entry.productName)) grouped.set(entry.productName, []);
+            grouped.get(entry.productName).push(entry);
         });
-
-        Object.keys(grouped).forEach(productName => {
-            const materials = grouped[productName];
-            const count = materials.length;
-            const materialLabel = count === 1 ? "material" : "materials";
-
-            const rows = materials.map(m => `
-                <tr>
-                    <td>${m.inventoryItemName}</td>
-                    <td>${m.quantityRequired} units</td>
-                </tr>
-            `).join("");
-
-            const card = document.createElement("div");
-            card.className = "recipe-card";
-            card.innerHTML = `
-                <div class="recipe-card-header">
-                    <h3>${productName}</h3>
-                    <span class="material-count">${count} ${materialLabel}</span>
-                </div>
-                <table>
-                    <tbody>
-                        ${rows}
-                    </tbody>
-                </table>
-            `;
-
-            recipesContainer.appendChild(card);
+        grouped.forEach((materials, productName) => {
+            const card = element("article", null, "recipe-card");
+            const header = element("div", null, "recipe-card-header");
+            header.append(element("h3", productName), element("span", `${materials.length} ${materials.length === 1 ? "material" : "materials"}`, "material-count"));
+            const table = element("table");
+            table.setAttribute("aria-label", `Materials for ${productName}`);
+            const body = element("tbody");
+            materials.forEach(material => {
+                const row = element("tr");
+                cells(row, [material.inventoryItemName, `${material.quantityRequired} units`]);
+                body.append(row);
+            });
+            table.append(body);
+            card.append(header, table);
+            recipesContainer.append(card);
         });
+        return true;
     } catch (error) {
-        console.error("Error loading recipes:", error);
+        if (requestId !== recipeRequestId) return null;
+        recipesContainer.replaceChildren(element("div", `Unable to load recipes. ${error.message}`, "no-data is-error"));
+        return false;
+    } finally {
+        if (requestId === recipeRequestId) recipesContainer.setAttribute("aria-busy", "false");
     }
 }
 
-// === Tab Click Handlers ===
-document.querySelectorAll(".tab-bar .tab").forEach(tab => {
-    tab.addEventListener("click", () => {
-        switchTab(tab.dataset.tab);
+function loadNotifications() {
+    return loadTable(notificationsBody, 6, "/api/notifications", notifications => {
+        notifications.forEach(notification => {
+            const row = element("tr");
+            cells(row, [notification.createdAt, notification.recipient, notification.itemName, notification.quantity, notification.location, notification.message]);
+            notificationsBody.append(row);
+        });
+    }, "You’re all caught up. No inventory notifications.");
+}
+
+byId("clear-notifications-btn").addEventListener("click", async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+        await request("/api/notifications", { method: "DELETE" });
+        notice("Notifications cleared.");
+        await loadNotifications();
+    } catch (error) { notice(error.message, "error"); }
+    finally { button.disabled = false; }
+});
+
+// Tabs follow the ARIA keyboard pattern, including wrapping and Home/End.
+const tabBar = document.querySelector(".tab-bar");
+const compactNavigation = window.matchMedia("(max-width: 760px)");
+function updateTabOrientation() {
+    tabBar.setAttribute("aria-orientation", compactNavigation.matches ? "horizontal" : "vertical");
+}
+updateTabOrientation();
+compactNavigation.addEventListener("change", updateTabOrientation);
+tabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+    tab.addEventListener("keydown", event => {
+        let next;
+        const forward = compactNavigation.matches ? "ArrowRight" : "ArrowDown";
+        const backward = compactNavigation.matches ? "ArrowLeft" : "ArrowUp";
+        if (event.key === forward) next = (index + 1) % tabs.length;
+        if (event.key === backward) next = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = tabs.length - 1;
+        if (next === undefined) return;
+        event.preventDefault();
+        tabs[next].focus();
+        switchTab(tabs[next].dataset.tab);
     });
 });
 
-// === Initial Load ===
-switchTab("inventory");
-loadNotifications();
-setupNotificationActions();
-
-async function loadNotifications() {
-    const notificationsBody = document.getElementById("notifications-body");
-    if (!notificationsBody) return;
-
+byId("inventory-search").addEventListener("input", renderInventory);
+byId("inventory-filter").addEventListener("change", renderInventory);
+byId("inventory-cancel-btn").addEventListener("click", resetInventoryForm);
+byId("order-cancel-btn").addEventListener("click", resetOrderForm);
+byId("bom-cancel-btn").addEventListener("click", resetBomForm);
+byId("refresh-btn").addEventListener("click", async event => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    byId("status-message").hidden = true;
     try {
-        const response = await fetch("/api/notifications");
-        const notifications = await response.json();
-
-        notificationsBody.innerHTML = "";
-
-        if (!notifications.length) {
-            notificationsBody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="notification-empty">No notifications yet.</td>
-                </tr>
-            `;
-            return;
+        const jobs = [loadInventory(), loadLowStockItems(), loadNotifications(), loadOrders()];
+        if (activeTab === "bom") jobs.push(loadBom());
+        if (activeTab === "recipes") jobs.push(loadRecipes());
+        const results = await Promise.all(jobs);
+        if (results.includes(false)) {
+            notice("Some data could not be refreshed. Please try again.", "error");
+        } else if (results.every(result => result === true)) {
+            notice("Dashboard refreshed.");
         }
-
-        notifications.forEach(notification => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${notification.createdAt ?? ""}</td>
-                <td>${notification.recipient ?? ""}</td>
-                <td>${notification.itemName ?? ""}</td>
-                <td>${notification.quantity ?? ""}</td>
-                <td>${notification.location ?? ""}</td>
-                <td>${notification.message ?? ""}</td>
-            `;
-            notificationsBody.appendChild(row);
-        });
-    } catch (error) {
-        console.error("Failed to load notifications:", error);
-        notificationsBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="notification-empty">Failed to load notifications.</td>
-            </tr>
-        `;
+    } finally {
+        button.disabled = false;
+        button.setAttribute("aria-busy", "false");
     }
-}
+});
 
-function setupNotificationActions() {
-    const clearButton = document.getElementById("clear-notifications-btn");
-    if (!clearButton) return;
-
-    clearButton.addEventListener("click", async () => {
-        try {
-            const response = await fetch("/api/notifications", {
-                method: "DELETE"
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to clear notifications");
-            }
-
-            await loadNotifications();
-        } catch (error) {
-            console.error("Failed to clear notifications:", error);
-            alert("Unable to clear notifications right now.");
-        }
-    });
-}
+switchTab("inventory");
+loadOrders();
